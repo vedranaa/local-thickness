@@ -2,9 +2,7 @@
 Fast local thickness in 3D and 2D.
 
 ## Installation
-<!--- Install the module using ```pip install localthickness``` or clone the repository.
- --->
-Clone the repository.
+Install the module using ```pip install localthickness``` or clone the repository.
 
 ## Use
 ``` python
