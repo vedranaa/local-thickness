@@ -11,7 +11,7 @@ import localthickness as lt
 #  Make test volume.
 B = lt.create_test_volume((100, 500, 400), sigma=15, boundary=0.001)
 
-# Compute thickness and separation
+# Compute thickness and separation.
 thickness = lt.local_thickness(B, scale=0.5)
 separation = lt.local_thickness(~B, scale=0.5)
 
