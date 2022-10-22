@@ -1,13 +1,3 @@
-# local-thickness
-Fast local thickness in 3D and 2D.
-
-## Installation
-<!--- Install the module using ```pip install localthickness``` or clone the repository.
- --->
-Clone the repository.
-
-## Use
-``` python
 import localthickness as lt
 
 #  Make test volume.
@@ -23,6 +13,3 @@ fig, ax = plt.subplots(1, 3, figsize=(10, 5))
 ax[0].imshow(B[10])
 ax[1].imshow(thickness[10], cmap=lt.black_plasma())
 ax[2].imshow(separation[10], cmap=lt.white_viridis())
-```
-
-![](https://github.com/vedranaa/local-thickness/raw/main/mwe_figure.png)
