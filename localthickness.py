@@ -229,8 +229,9 @@ def local_thickness_conventional(B, mask=None, verbose=False):
             selem = skimage.morphology.disk(r)
         elif B.ndim==3:
             selem = skimage.morphology.ball(r)
-        temp = skimage.morphology.dilation(df * (df>=r), footprint=selem)
-        change = temp > r    
+        df[df < r] = 0
+        temp = skimage.morphology.dilation(df, footprint=selem)
+        change = temp > 0  #  the same as temp > out or temp >= r    
         out[change] = temp[change]
     out *= B
     if mask is not None:
