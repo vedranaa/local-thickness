@@ -46,7 +46,7 @@ def local_thickness_basic(B, mask=None):
     for r in range(0, int(out.max())):
         temp = dilate(out)
         change = out > r
-        out[change] = temp[change]
+        np.copyto(out, temp, where=change)
     return out
 
 
@@ -224,15 +224,14 @@ def local_thickness_conventional(B, mask=None, verbose=False):
     # iteratively dilate the distance field starting with max value
     for r in range(1, int(df.max()) + 1):
         if verbose:
-            print(f'Dilating with radius {r}/{int(np.max(df))}')
+            print(f'Dilating with radius {r} of {int(np.max(df))}')
         if B.ndim==2:
             selem = skimage.morphology.disk(r)
         elif B.ndim==3:
             selem = skimage.morphology.ball(r)
         df[df < r] = 0
         temp = skimage.morphology.dilation(df, footprint=selem)
-        change = temp > 0  #  the same as temp > out or temp >= r    
-        out[change] = temp[change]
+        out = np.maximum(out, temp)    
     out *= B
     if mask is not None:
         out *= mask
