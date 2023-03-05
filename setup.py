@@ -14,6 +14,5 @@ setup(
     author_email = 'vand@dtu.dk, abda@dtu.dk',
     license ='GPL-3.0 license',
     py_modules = ['localthickness'],
-    install_requires = ['edt', 'numpy'],
-    extras_require  = ['scipy.ndimage']
+    install_requires = ['edt', 'numpy']
     )
