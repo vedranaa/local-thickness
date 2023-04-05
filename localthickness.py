@@ -101,12 +101,16 @@ def coords(old, new):
     '''
 
     if len(old)==3:
-        c = np.mgrid[0:old[0]-1:new[0]*1j, 0:old[1]-1:new[1]*1j, 0:old[2]-1:new[2]*1j]
+        c = np.mgrid[0 : old[0]-1 : new[0] * 1j, 0 : old[1]-1 : new[1] * 1j, 0 : old[2]-1 : new[2] * 1j]
     elif len(old)==2:
-        c = np.mgrid[0:old[0]-1:new[0]*1j, 0:old[1]-1:new[1]*1j]
+        c = np.mgrid[0: old[0]-1 : new[0] * 1j, 0 : old[1]-1 : new[1] * 1j]
     else:
         return
     
+    # we had some numerical issues so making sure that we stay inside the image
+    for i in range(len(c)):
+        c[i] = np.clip(c[i], 0, old[i] - 1)
+
     return c
 
 
