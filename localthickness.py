@@ -371,11 +371,12 @@ def create_test_volume(dim, sigma=7, threshold=0, boundary=0, frame = True, seed
 
 #%% 
 def save_thickness(thickness, filename_root, factor=5, pad=True, 
-                   dilate=True, blend=True, maxval=None):
-    '''Saves results of local thickness analysis in three volumes suitable
-    for visualization in paraview.
+                   dilate=True, blend=True, maxval=None,
+                   paraview_alpha=True):
+    '''Saves results of local thickness analysis in two volumes suitable for
+    visualization in paraview.
     Inputs:
-        thickness: local thickness volume,  a 3D numpy array, where 0 is 
+        thickness: local thickness volume, a 3D numpy array, where 0 is 
             bacground and positive values are thickness.
         filename_root: root of the filename, sufixes will be added 
         factor: int, downscaling factor.
@@ -408,17 +409,17 @@ def save_thickness(thickness, filename_root, factor=5, pad=True,
     if dilate:
         thickness = dilate3d(thickness)
 
-    cmap = black_plasma(bg=1, bg_alpha=0.1)  # white blends nicer
+    cmap = black_plasma(bg=0, bg_alpha=1)  # set bg=1 for white which might blend nicer
     
     with (tifffile.TiffWriter(filename_root + '_gray.tif') as gr, 
-            tifffile.TiffWriter(filename_root + '_rgba.tif') as rgba, 
-            tifffile.TiffWriter(filename_root + '_rgb.tif') as rgb):
+            tifffile.TiffWriter(filename_root + '_rgba.tif') as rgba):
         for g, t in zip(gray, thickness):
             gr.write((255 * g).astype(np.uint8))
             t_rgba = cmap(t/maxval)
-            t_rgba[:, :, 3] = 1 - t_rgba[:, :, 3]  # flipping opacity to work with paraview
+            if paraview_alpha:
+                t_rgba[:, :, 3] = 1 - t_rgba[:, :, 3]  # flipping opacity to work with paraview
             rgba.write((255*t_rgba).astype(np.uint8), photometric='rgb', extrasamples = 'ASSOCALPHA') 
-            rgb.write((255*t_rgba[:, :, :3]).astype(np.uint8), photometric='rgb')
+            # rgb.write((255*t_rgba[:, :, :3]).astype(np.uint8), photometric='rgb')
     
 
 #%% VTK WRITE FUNCTIONS
@@ -493,28 +494,40 @@ def save_rgba2vtk(rgba, dim, filename, filetype='ASCII'):
             np.savetxt(f,rgba.ravel(),fmt='%.5g', newline= ' ')   
 
 
-def save_thickness2vtk(B, thickness, filename, colormap = black_plasma(), 
-                  maxval = None, dilate = True, filetype='ASCII', origin=(0,0,0),
-                  spacing=(1,1,1)):
+def save_thickness2vtk(thickness, filename, 
+                       factor=5, pad=True, dilate=True, blend=True, maxval=None,
+                       filetype='ASCII', origin=(0,0,0), spacing=(1,1,1)):
     ''' Writes a vtk file with results of local thickness analysis.
     Author:vand@dtu.dk, 2019
-    TODO: add options similar to save_thickness.
     '''
     
-    g = edt.edt(B) - edt.edt(~B) - B + 0.5
-    g = np.exp(0.1*g)
-    g = g/(g+1)
-    
-    save_gray2vtk(g, filename, filetype=filetype, origin=origin, spacing=spacing)
+    if factor>1:
+        Z, Y, X = thickness.shape
+        thickness = thickness[Z%factor//2::factor, Y%factor//2::factor, 
+                              X%factor//2::factor]
+    if pad:
+        thickness = np.pad(thickness, ((1, 1), ) * 3, constant_values=0)
+
+    # Grayscale volume which will be saved for shape
+    gray = ~(thickness>0)  
+    if blend:
+        gray = edt.edt(gray) - edt.edt(~gray) - gray + 0.5
+        gray = np.clip(gray, -25, 25)
+        gray = np.exp(0.1 * gray)
+        gray = gray / (gray + 1)  # values between 0 and 1 with 0.5 at interface
     
     if maxval is None: 
         maxval = np.max(thickness)
     
     if dilate:
         thickness = dilate3d(thickness)
-   
-    rgba = colormap(thickness.ravel()/maxval)
 
+    cmap = black_plasma(bg=0, bg_alpha=0.1)  
+    rgba = cmap(thickness.ravel()/maxval)
+
+    # Now saving
+    save_gray2vtk(gray, filename, filetype=filetype, origin=origin, spacing=spacing)
+       
     with open(filename, 'a') as f:
         f.write('COLOR_SCALARS rgba 4\n')
     
