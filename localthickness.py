@@ -245,25 +245,45 @@ def local_thickness_conventional(B, mask=None, verbose=False):
 
 #%% VISUALIZATION FUNCTIONS
 
-def black_plasma():
-    colors = plt.cm.plasma(np.linspace(0, 1, 256))
-    colors[:1, :] = np.array([0, 0, 0, 1])
+
+def mixed_colors(N, bg=0.5, bg_alpha=0.5):
+    '''Colormap with permuted jet colors.'''
+    rng = np.random.default_rng(2022)
+    colors = plt.cm.jet(np.linspace(0, 1, N))
+    colors = rng.permutation(colors)
+    colors = np.vstack((np.array([bg] * 3 + [bg_alpha]), colors))
     cmap = matplotlib.colors.ListedColormap(colors)
     return cmap
 
+
+def black_plasma(bg=0, bg_alpha=1):
+    ''' Matplotlib colormap often used for local thickness.
+        bg: background color (default black).
+        bg_alpha: background alpha value (default opaque).
+    '''
+    colors = plt.cm.plasma(np.linspace(0, 1, 256))
+    colors[:1, :] = np.array([bg] * 3 + [bg_alpha])
+    cmap = matplotlib.colors.ListedColormap(colors)
+    return cmap
+
+
 def white_viridis():
+    '''Another colormap useful for showing both thickness and separation.'''
     colors = np.flip(plt.cm.viridis(np.linspace(0, 1, 256)), axis=0)
     colors[:1, :] = np.array([1, 1, 1, 1])
     cmap = matplotlib.colors.ListedColormap(colors)
     return cmap
 
+
 def pl_black_plasma():
-    c = black_plasma()(np.linspace(0, 1, 256))[:,0:3]
+    '''Colormap in plotly format'''
+    c = black_plasma()(np.linspace(0, 1, 256))[:, 0:3]
     pl_colorscale = []
     for i in range(256):
         pl_colorscale.append([i/255, f'rgb({c[i,0]},{c[i,1]},{c[i,2]})'])
     return pl_colorscale
- 
+
+
 def arrow_navigation(event, z, Z):
     if event.key == "up" or event.key.lower()=='w':
         z = min(z+1, Z-1)
@@ -279,9 +299,11 @@ def arrow_navigation(event, z, Z):
         z = max(z-50, 0)
     return z
 
+
 def show_vol(V, cmap=plt.cm.gray, vmin = None, vmax = None): 
     """
-    Shows volumetric data for interactive inspection.
+    Shows volumetric data for interactive inspection. 
+    Whether it works depends on matplotlib backend.
     @author: vand at dtu dot dk
     """
     def update_drawing():
@@ -304,6 +326,7 @@ def show_vol(V, cmap=plt.cm.gray, vmin = None, vmax = None):
     ax.imshow(V[z], cmap=cmap, vmin=vmin, vmax=vmax)
     ax.set_title(f'slice z={z}')
     fig.canvas.mpl_connect('key_press_event', key_press)
+
 
 #%% HELPING FUNCTIONS
 
@@ -344,6 +367,59 @@ def create_test_volume(dim, sigma=7, threshold=0, boundary=0, frame = True, seed
         if len(dim)==3:
             V[:, :, [0,-1]] = False
     return V
+
+
+#%% 
+def save_thickness(thickness, filename_root, factor=5, pad=True, 
+                   dilate=True, blend=True, maxval=None):
+    '''Saves results of local thickness analysis in three volumes suitable
+    for visualization in paraview.
+    Inputs:
+        thickness: local thickness volume,  a 3D numpy array, where 0 is 
+            bacground and positive values are thickness.
+        filename_root: root of the filename, sufixes will be added 
+        factor: int, downscaling factor.
+        pad: bool, whether to pad with background to ensure closed surfaces.
+        dilate: bool, whether to dilate colored object 1px to ensure color on 
+            surface
+        blend: whether to blend binary values of object representation for a
+            smoother surface
+    '''
+    import tifffile
+    
+    if factor>1:
+        Z, Y, X = thickness.shape
+        thickness = thickness[Z%factor//2::factor, Y%factor//2::factor, 
+                              X%factor//2::factor]
+    if pad:
+        thickness = np.pad(thickness, ((1, 1), ) * 3, constant_values=0)
+
+    # Grayscale volume which will be saved for shape
+    gray = ~(thickness>0)  
+    if blend:
+        gray = edt.edt(gray) - edt.edt(~gray) - gray + 0.5
+        gray = np.clip(gray, -25, 25)
+        gray = np.exp(0.1 * gray)
+        gray = gray / (gray + 1)  # values between 0 and 1 with 0.5 at interface
+    
+    if maxval is None: 
+        maxval = np.max(thickness)
+    
+    if dilate:
+        thickness = dilate3d(thickness)
+
+    cmap = black_plasma(bg=1, bg_alpha=0.1)  # white blends nicer
+    
+    with (tifffile.TiffWriter(filename_root + '_gray.tif') as gr, 
+            tifffile.TiffWriter(filename_root + '_rgba.tif') as rgba, 
+            tifffile.TiffWriter(filename_root + '_rgb.tif') as rgb):
+        for g, t in zip(gray, thickness):
+            gr.write((255 * g).astype(np.uint8))
+            t_rgba = cmap(t/maxval)
+            t_rgba[:, :, 3] = 1 - t_rgba[:, :, 3]  # flipping opacity to work with paraview
+            rgba.write((255*t_rgba).astype(np.uint8), photometric='rgb', extrasamples = 'ASSOCALPHA') 
+            rgb.write((255*t_rgba[:, :, :3]).astype(np.uint8), photometric='rgb')
+    
 
 #%% VTK WRITE FUNCTIONS
 
@@ -422,13 +498,14 @@ def save_thickness2vtk(B, thickness, filename, colormap = black_plasma(),
                   spacing=(1,1,1)):
     ''' Writes a vtk file with results of local thickness analysis.
     Author:vand@dtu.dk, 2019
+    TODO: add options similar to save_thickness.
     '''
     
     g = edt.edt(B) - edt.edt(~B) - B + 0.5
     g = np.exp(0.1*g)
     g = g/(g+1)
     
-    save_gray2vtk(g, filename, filetype=filetype, origin=origin, spacing = spacing)
+    save_gray2vtk(g, filename, filetype=filetype, origin=origin, spacing=spacing)
     
     if maxval is None: 
         maxval = np.max(thickness)
