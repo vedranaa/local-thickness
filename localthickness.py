@@ -25,23 +25,22 @@ def local_thickness(B, scale=1, mask=None):
         return local_thickness_scaled(B, scale, mask)
         
 
-def local_thickness_basic(B, mask=None):
+def local_thickness_basic(B, mask=None, given_dist=False):
     """
     Computes local thickness in 2D or 3D (without scaling).
     """
     
-    if B.ndim==2:
-        dilate = dilate2d
-    elif B.ndim==3:
-        dilate = dilate3d
-    else:
-        return
+    dilate = {2: dilate2d, 3: dilate3d}[B.ndim]
       
-    # distance field
-    out = edt.edt(B)
+    # distance field, if not already given distances
+    if not given_dist:
+        out = edt.edt(B)
+    else:
+        out = B
+    
     if mask is not None:
         out = out * mask
-     
+        
     # iteratively dilate the distance field starting with max value
     for r in range(0, int(out.max())):
         temp = dilate(out)
@@ -55,34 +54,37 @@ def local_thickness_scaled(B, scale=0.5, mask=None):
     Computes local thickness in 2D or 3D using scaled approach.
     """
     
-    if B.ndim==2:
-        dilate = dilate2d
-    elif B.ndim==3:
-        dilate = dilate3d
-    else:
-        return
+    dilate = {2: dilate2d, 3: dilate3d}[B.ndim]
     
     dim = B.shape  # original image dimension
     dim_s = tuple(int(scale*d) for d in dim)  # dowscaled image dimension
     c = coords(dim, dim_s)
+
+    dist = edt.edt(B)
     
-    # downscaling the volumes, order=0 is nearest-neighbor
+    # downscale (order=0 is nearest-neighbor) and masking
     if mask is None:
         mask_s = None
     else: 
+        dist = dist * mask
         mask_s = scipy.ndimage.map_coordinates(mask, c, order=0)
-    B_s = scipy.ndimage.map_coordinates(B, c, order=0)
+        
+    dist_s = scipy.ndimage.map_coordinates(dist, c, order=0) * scale
     
-    # computing local thickness for downscaled
-    out = local_thickness(B_s, mask=mask_s)
+    # compute local thickness for downscaled
+    out = local_thickness_basic(dist_s, mask=mask_s, given_dist=True)
     
+    # free up some memery (does this make difference?)
+    del dist_s
+    del mask_s
+
     # flow-over boundary to avoid blend across boundary, will mask later
+    B_s = scipy.ndimage.map_coordinates(B, c, order=0)
     temp = dilate(out)
     out[~B_s] = temp[~B_s]
     
     # free up some memery (does this make difference?)
     del B_s
-    del mask_s
 
     # upscale, order=1 is bi-linear
     out = scipy.ndimage.map_coordinates(out, coords(dim_s, dim), order=1)
@@ -101,13 +103,14 @@ def coords(old, new):
     '''
 
     if len(old)==3:
-        c = np.mgrid[0 : old[0]-1 : new[0] * 1j, 0 : old[1]-1 : new[1] * 1j, 0 : old[2]-1 : new[2] * 1j]
+        c = np.mgrid[0 : old[0]-1 : new[0] * 1j, 0 : old[1]-1 : new[1] * 1j, 
+                     0 : old[2]-1 : new[2] * 1j]
     elif len(old)==2:
         c = np.mgrid[0: old[0]-1 : new[0] * 1j, 0 : old[1]-1 : new[1] * 1j]
     else:
         return
     
-    # we had some numerical issues so making sure that we stay inside the image
+    # we had numerical problems so I make sure that we stay inside the image
     for i in range(len(c)):
         c[i] = np.clip(c[i], 0, old[i] - 1)
 
