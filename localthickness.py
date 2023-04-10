@@ -287,6 +287,12 @@ def pl_black_plasma():
     return pl_colorscale
 
 
+def view_thickness_slice(z, T, vmax):
+    plt.imshow(T[z], cmap=black_plasma(), vmin=0, vmax=vmax, interpolation='nearest')
+    plt.title(f'slice z={z}')
+    plt.show()
+
+
 def arrow_navigation(event, z, Z):
     if event.key == "up" or event.key.lower()=='w':
         z = min(z+1, Z-1)
@@ -303,7 +309,7 @@ def arrow_navigation(event, z, Z):
     return z
 
 
-def show_vol(V, cmap=plt.cm.gray, vmin = None, vmax = None): 
+def show_vol(V, cmap=plt.cm.gray, vmin=None, vmax=None): 
     """
     Shows volumetric data for interactive inspection. 
     Whether it works depends on matplotlib backend.
@@ -326,9 +332,11 @@ def show_vol(V, cmap=plt.cm.gray, vmin = None, vmax = None):
         vmin = np.min(V)
     if vmax is None: 
         vmax = np.max(V)
+    
     ax.imshow(V[z], cmap=cmap, vmin=vmin, vmax=vmax)
     ax.set_title(f'slice z={z}')
     fig.canvas.mpl_connect('key_press_event', key_press)
+    plt.show()
 
 
 #%% HELPING FUNCTIONS
@@ -373,24 +381,14 @@ def create_test_volume(dim, sigma=7, threshold=0, boundary=0, frame = True, seed
 
 
 #%% 
-def save_thickness(thickness, filename_root, factor=5, pad=True, 
-                   dilate=True, blend=True, maxval=None,
-                   paraview_alpha=True):
-    '''Saves results of local thickness analysis in two volumes suitable for
-    visualization in paraview.
-    Inputs:
-        thickness: local thickness volume, a 3D numpy array, where 0 is 
-            bacground and positive values are thickness.
-        filename_root: root of the filename, sufixes will be added 
-        factor: int, downscaling factor.
-        pad: bool, whether to pad with background to ensure closed surfaces.
-        dilate: bool, whether to dilate colored object 1px to ensure color on 
-            surface
-        blend: whether to blend binary values of object representation for a
-            smoother surface
-    '''
-    import tifffile
-    
+def prepare_for_saving(thickness, options):
+
+    factor = options.get('factor', 1)
+    pad = options.get('pad', True)
+    blend = options.get('blend', True)
+    dilate = options.get('dilate', True)
+    maxval = options.get('maxval', thickness.max())
+
     if factor>1:
         Z, Y, X = thickness.shape
         thickness = thickness[Z%factor//2::factor, Y%factor//2::factor, 
@@ -406,11 +404,33 @@ def save_thickness(thickness, filename_root, factor=5, pad=True,
         gray = np.exp(0.1 * gray)
         gray = gray / (gray + 1)  # values between 0 and 1 with 0.5 at interface
     
-    if maxval is None: 
-        maxval = np.max(thickness)
-    
     if dilate:
         thickness = dilate3d(thickness)
+
+    return thickness, gray, maxval
+
+
+
+def save_thickness_volumes(thickness, filename_root, **options):
+    '''Saves results of local thickness analysis in two volumes suitable for
+    visualization in paraview.
+    Inputs:
+        thickness: local thickness volume, a 3D numpy array, where 0 is 
+            bacground and positive values are thickness.
+        filename_root: root of the filename, sufixes will be added 
+        factor: int, downscaling factor. Default 1 does not downscale.
+        pad: bool, whether to pad with background to ensure closed surfaces.
+        dilate: bool, whether to dilate colored object 1px to ensure color on 
+            surface.
+        blend: whether to blend binary values of object representation for a
+            smoother surface.
+        maxval: thickness which will be shown with last color in cmap.
+        paraview_alpha: whether to invert alpha values as paraview expects.
+    '''
+    import tifffile
+
+    paraview_alpha = options.get('paraview_alpha', True)
+    thickness, gray, maxval = prepare_for_saving(thickness, options)
 
     cmap = black_plasma(bg=0, bg_alpha=1)  # set bg=1 for white which might blend nicer
     
@@ -497,33 +517,16 @@ def save_rgba2vtk(rgba, dim, filename, filetype='ASCII'):
             np.savetxt(f,rgba.ravel(),fmt='%.5g', newline= ' ')   
 
 
-def save_thickness2vtk(thickness, filename, 
-                       factor=5, pad=True, dilate=True, blend=True, maxval=None,
-                       filetype='ASCII', origin=(0,0,0), spacing=(1,1,1)):
+def save_thickness2vtk(thickness, filename, **options):
     ''' Writes a vtk file with results of local thickness analysis.
     Author:vand@dtu.dk, 2019
     '''
-    
-    if factor>1:
-        Z, Y, X = thickness.shape
-        thickness = thickness[Z%factor//2::factor, Y%factor//2::factor, 
-                              X%factor//2::factor]
-    if pad:
-        thickness = np.pad(thickness, ((1, 1), ) * 3, constant_values=0)
 
-    # Grayscale volume which will be saved for shape
-    gray = ~(thickness>0)  
-    if blend:
-        gray = edt.edt(gray) - edt.edt(~gray) - gray + 0.5
-        gray = np.clip(gray, -25, 25)
-        gray = np.exp(0.1 * gray)
-        gray = gray / (gray + 1)  # values between 0 and 1 with 0.5 at interface
+    filetype = options.get('filetype', 'ASCII')
+    origin = options.get('origin', (0, 0, 0))
+    spacing = options.get('spacing', (1, 1, 1))
     
-    if maxval is None: 
-        maxval = np.max(thickness)
-    
-    if dilate:
-        thickness = dilate3d(thickness)
+    thickness, gray, maxval = prepare_for_saving(thickness, options)
 
     cmap = black_plasma(bg=0, bg_alpha=0.1)  
     rgba = cmap(thickness.ravel()/maxval)

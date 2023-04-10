@@ -8,7 +8,7 @@ Install the module using ```pip install localthickness``` or clone the repositor
 ``` python
 import localthickness as lt
 
-#  Make test volume.
+#  Make a binary test volume. 
 B = lt.create_test_volume((100, 500, 400), sigma=15, boundary=0.001)
 
 # Compute thickness and separation.
