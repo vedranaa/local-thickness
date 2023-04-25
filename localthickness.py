@@ -410,7 +410,6 @@ def prepare_for_saving(thickness, options):
     return thickness, gray, maxval
 
 
-
 def save_thickness_volumes(thickness, filename_root, **options):
     '''Saves results of local thickness analysis in two volumes suitable for
     visualization in paraview.
@@ -444,6 +443,7 @@ def save_thickness_volumes(thickness, filename_root, **options):
             rgba.write((255*t_rgba).astype(np.uint8), photometric='rgb', extrasamples = 'ASSOCALPHA') 
             # rgb.write((255*t_rgba[:, :, :3]).astype(np.uint8), photometric='rgb')
     
+
 
 #%% VTK WRITE FUNCTIONS
 
@@ -483,6 +483,7 @@ def save_gray2vtk(volume, filename, filetype='ASCII', origin=(0,0,0),
     else: # ASCII
         with open(filename, 'a') as f:
             np.savetxt(f,volume.ravel(),fmt='%.5g', newline= ' ')
+        
         
 def save_rgba2vtk(rgba, dim, filename, filetype='ASCII'):
     ''' Writes a vtk file with RGBA volume data.
