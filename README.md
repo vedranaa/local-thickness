@@ -25,3 +25,17 @@ ax[2].imshow(separation[10], cmap=lt.white_viridis())
 ```
 
 ![](https://github.com/vedranaa/local-thickness/raw/main/mwe_figure.png)
+
+
+## Paper
+The fast local thickness method is described and evaluated in our contribution to the 8th IEEE Workshop on Computer Vision for Microscopy Image Analysis (CVMI), to be held in conjunction with the CVPR 2023 conference. Please cite our paper (to appear Juni 2023) if you use the method in your work.
+
+```
+@inproceedings{dahl2023fast,
+  title={Fast local thickness},
+  author={Dahl, Vedrana A and Dahl, Anders B},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops},
+  year={2023}
+}
+```
+
