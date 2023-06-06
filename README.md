@@ -1,5 +1,6 @@
 # localthickness
 Fast local thickness in 3D and 2D.
+Implements algorithm described in [our CVPRW paper](https://openaccess.thecvf.com/content/CVPR2023W/CVMI/papers/Dahl_Fast_Local_Thickness_CVPRW_2023_paper.pdf).
 
 ## Installation
 Install the module using ```pip install localthickness``` or clone the repository.
