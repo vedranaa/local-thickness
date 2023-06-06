@@ -1,5 +1,6 @@
 # localthickness
 Fast local thickness in 3D and 2D.
+Implements algorithm described in [our CVPR-W (CVMI) paper](https://openaccess.thecvf.com/content/CVPR2023W/CVMI/papers/Dahl_Fast_Local_Thickness_CVPRW_2023_paper.pdf).
 
 ## Installation
 Install the module using ```pip install localthickness``` or clone the repository.
@@ -28,13 +29,14 @@ ax[2].imshow(separation[10], cmap=lt.white_viridis())
 
 
 ## Paper
-The fast local thickness method is described and evaluated in our contribution to the 8th IEEE Workshop on Computer Vision for Microscopy Image Analysis (CVMI), to be held in conjunction with the CVPR 2023 conference. Please cite our paper (to appear Juni 2023) if you use the method in your work.
+The fast local thickness method is described and evaluated in our contribution to the 8th IEEE Workshop on Computer Vision for Microscopy Image Analysis (CVMI), held in conjunction with the CVPR 2023 conference. Please cite our paper if you use the method in your work.
 
 ```
 @inproceedings{dahl2023fast,
-  title={Fast local thickness},
-  author={Dahl, Vedrana A and Dahl, Anders B},
+  title={Fast Local Thickness},
+  author={Dahl, Vedrana Andersen and Dahl, Anders Bjorholm},
   booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops},
+  pages={4335--4343},
   year={2023}
 }
 ```
