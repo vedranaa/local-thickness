@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name = 'localthickness',
-    version = '0.1.2',
+    version = '0.1.3',
     description = 'Fast local thickness in 3D and 2D.',
     long_description = long_description,
     long_description_content_type = "text/markdown",
@@ -16,3 +16,8 @@ setup(
     py_modules = ['localthickness'],
     install_requires = ['edt', 'numpy']
     )
+
+# Steps (providing all is up to date):
+# python3 -m build
+# twine upload dist/*
+# Use credentials from pypi.org
