@@ -341,7 +341,7 @@ def show_vol(V, cmap=plt.cm.gray, vmin=None, vmax=None):
 
 #%% HELPING FUNCTIONS
 
-def create_test_volume(dim, sigma=7, threshold=0, boundary=0, frame = True, seed = None):
+def create_test_volume(dim, sigma=7, threshold=0, boundary=0, frame=True, seed=None):
     """ Creates test volume for local thickness and porosity analysis.
     Arguments:
         dim: tuple giving the size of the volume
@@ -404,7 +404,8 @@ def prepare_for_saving(thickness, options):
         gray = np.exp(0.1 * gray)
         gray = gray / (gray + 1)  # values between 0 and 1 with 0.5 at interface
     
-    if dilate:
+    
+    for i in range(dilate):  # if dilate is True, only once
         thickness = dilate3d(thickness)
 
     return thickness, gray, maxval
